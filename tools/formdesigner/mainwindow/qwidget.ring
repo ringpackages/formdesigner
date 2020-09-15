@@ -169,40 +169,56 @@ class FormDesigner_QWidget from QWidget
 	func DialogButtonAction oDesigner,nRow
 		switch nRow {
 			case 5 	# Back Color
-				cColor = oDesigner.oGeneral.SelectColor()
-				setBackColor(cColor)
-				DisplayProperties(oDesigner)
+				oDesigner.oGeneral.cColorOperation = :BackColor
+				oDesigner.oGeneral.SelectColor()
 			case 6	# Window Flags
-				open_windowInPackages(:WindowFlagsController,[
+				openWindowInPackages(:WindowFlagsController,[
 					"System.GUI"
 				])
-				Last_Window().setParentObject(oDesigner)
-				Last_Window().LoadSelectedItems()
+				lastWindow().setParentObject(oDesigner)
+				lastWindow().LoadSelectedItems()
 			case 7  # Window Layout 
-				open_window(:WindowObjectsController)
-				Last_Window().setParentObject(oDesigner)
-				Last_Window().setPropertyIndex(7)
-				Last_Window().setMethodName("setMainLayoutValue")
+				openWindow(:WindowObjectsController)
+				lastWindow().setParentObject(oDesigner)
+				lastWindow().setPropertyIndex(7)
+				lastWindow().setMethodName("setMainLayoutValue")
 				aList = oDesigner.oModel.GetLayoutsNames()
-				Last_Window().LoadObjectsData(aList)
-				Last_Window().LoadSelectedItems()
+				lastWindow().LoadObjectsData(aList)
+				lastWindow().LoadSelectedItems()
 			case 8	# Window Icon
 				cFile = oDesigner.oGeneral.SelectFile(oDesigner)
-				setWindowIconValue(cFile)
-				DisplayProperties(oDesigner)
+				if ! isWebAssembly() {
+					ApplyOpenImageFile(oDesigner,cFile)
+				}
 			case 9	# Menubar
-				open_windowInPackages(:MenubarDesignerController,[
+				openWindowInPackages(:MenubarDesignerController,[
 					"System.GUI"
 				])
-				Last_Window().setParentObject(oDesigner)
-				Last_Window().setMenubar(MenubarValue())
+				lastWindow().setParentObject(oDesigner)
+				lastWindow().setMenubar(MenubarValue())
 		}
 
+	func ApplyOpenImageFile oDesigner,cFile
+		setWindowIconValue(cFile)
+		DisplayProperties(oDesigner)
+
+	func ApplyBackColor oDesigner,cColor
+		setBackColor(cColor)
+		DisplayProperties(oDesigner)
+
 	func MousePressAction oDesigner
-		# 8, 6 to start drawing from the center of the Mouse Cursor
-			nX = oDesigner.oView.oFilter.getglobalx() - 8
-			ny = oDesigner.oView.oFilter.getglobaly() - 6
+		if isWebAssembly() {
+			nFixX = 0
+			nFixY = 0
+		else 
+			nFixX = -1
+			nFixY = -6
+		}
+		# Start drawing from the center of the Mouse Cursor
+			nX = oDesigner.oView.oFilter.getglobalx() + nFixX
+			ny = oDesigner.oView.oFilter.getglobaly() + nFixY
 		oDesigner.oView.oLabelSelect.raise()
+		oDesigner.oView.oLabelSelect.move(nX,nY)
 		oDesigner.oView.oLabelSelect.resize(1,1)
 		oDesigner.oView.oLabelSelect.show()
 
@@ -233,7 +249,11 @@ class FormDesigner_QWidget from QWidget
 		return False
 
 	func GetRectDim oDesigner
-		C_TOPMARGIN = 25
+		if isWebAssembly() {
+			C_TOPMARGIN = 0
+		else 
+			C_TOPMARGIN = 25
+		}
 		nX2 = oDesigner.oView.oFilter.getglobalx()
 		ny2 = oDesigner.oView.oFilter.getglobaly()
 		top = min(nY2,nY) - oDesigner.oView.oArea.y() - oSubWindow.y() - y() - C_TOPMARGIN - oDesigner.oView.win.y()

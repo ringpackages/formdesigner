@@ -7,9 +7,22 @@
 
 package formdesigner
 
-Class FormDesignerGeneral
+Class FormDesignerGeneral from ObjectsParent 
 
-	oCursor =  new qCursor()
+	oCursor =  new QCursor()
+
+	oColor = new QColorDialog() {
+		SetColorSelectedEvent(Method("oGeneral.NewColor"))
+	}	
+	cColorOperation = :None
+
+	oFont = new QFontDialog() {
+			setFontSelectedEvent(Method("oGeneral.NewFont"))
+	}
+	cFontOperation = :None
+
+	func FormDesigner 
+		return Me()
 
 	func oCursorA
 		oCursor.setShape(Qt_ArrowCursor)
@@ -31,32 +44,59 @@ Class FormDesignerGeneral
 		oCursor.setShape(Qt_SizeVerCursor)
 		return oCursor
 
-	func SelectColor
-		oColor = new qColorDialog()
-		aColor = oColor.GetColor()
-		oColor.delete()
-		r=hex(acolor[1]) g=hex(acolor[2]) b=hex(acolor[3])
+	func NewColor 
+		oNewColor = oColor.selectedcolor()
+		r = oNewColor.red()
+		g = oNewColor.green()
+		b = oNewColor.blue()
+		r=hex(r) g=hex(g) b=hex(b)
 		if len(r) < 2 { r = "0" + r }
 		if len(g) < 2 { g = "0" + g }
 		if len(b) < 2 { b = "0" + b }
 		cColor = "#" + r + g + b
-		return cColor
+
+		Switch cColorOperation {
+			case :TextColor 
+				FormDesigner().oModel.ActiveObject().ApplyTextColor(FormDesigner(),cColor)
+			case :BackColor 
+				FormDesigner().oModel.ActiveObject().ApplyBackColor(FormDesigner(),cColor)
+			case :MSTextColor 
+				FormDesigner().ApplyMSTextColor(cColor)
+			case :MSBackColor 
+				FormDesigner().ApplyMSBackColor(cColor)
+		}
+
+	func SelectColor		
+		oColor.Show()
+
+	func NewFont
+		cFont = oFont.selectedfont().tostring()
+		switch cFontOperation {
+			case :font 
+				FormDesigner().oModel.ActiveObject().ApplyFont(FormDesigner(),cFont)
+			case :MSFont 
+				FormDesigner().ApplyMSFont(cFont)
+		}
 
 	func SelectFont
-		cFont = ""
-		oFontDialog = new qfontdialog() {
-			aFont = getfont()
-		}
-		oFontDialog.delete()
-		if aFont[1] != NULL {
-			cFont = aFont[1]
-		}
-		return cFont
+		oFont.show()
 
 	func SelectFile oDesigner
-		oFileDialog = new qfiledialog(oDesigner.oView.win) {
-			cInputFileName = getopenfilename(oDesigner.oView.win,"Open File",currentdir(),"*.*")
+		if ! isWebAssembly() {
+			oFileDialog = new qfiledialog(oDesigner.oView.win) {
+				cInputFileName = getopenfilename(oDesigner.oView.win,"Open File",currentdir(),"*.*")
+			}
+			return cInputFileName
+		else 
+			WebAssemblyUpload("Image Files (*)",Method("oGeneral.NewImageFile"))
 		}
-		oFileDialog.delete()
-		return cInputFileName
 
+	func NewImageFile 
+		cInputFileName = WebAssemblyUploadedFileName()
+		if fexists( cInputFileName ) {
+			remove( cInputFileName )
+		}
+		Write(   cInputFileName ,
+			 WebAssemblyUploadedFileContent()
+		)
+		FormDesigner().oModel.ActiveObject().ApplyOpenImageFile(FormDesigner(),cInputFileName)

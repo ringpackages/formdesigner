@@ -7,10 +7,70 @@
 
 package formdesigner
 
-class FormDesignerFileSystem
+class FormDesignerFileSystem from ObjectsParent 
 
 	cFileName = "noname.rform"
 	oGenerator = new FormDesignerCodeGenerator
+
+	lUseFileDialogStaticMethods = ! isWebAssembly()
+
+	oNewFileDialog = new QFileDialog(NULL) {
+		setFilter(QDir_AllEntries|QDir_Hidden|QDir_System)
+		setFileSelectedevent(Method("oFile.NewFileDialogOperation()"))
+		setWindowTitle("New Form")
+		setLabelText(QFileDialog_Accept,"Save")
+		setNameFilter("Form files (*.rform *)")
+		setDefaultSuffix("rform")
+		setFileMode(QFileDialog_AnyFile)
+		setViewMode(QFileDialog_List)
+		setOption(QFileDialog_ShowDirsOnly,False)
+	}
+
+	oOpenFileDialog = new QFileDialog(NULL) {
+		setFilter(QDir_AllEntries|QDir_Hidden|QDir_System)
+		setFileSelectedevent(Method("oFile.OpenFileDialogOperation()"))
+		setWindowTitle("Open Form")
+		setLabelText(QFileDialog_Accept,"Open")
+		setNameFilter("Form files (*.rform *)")
+		setDefaultSuffix("rform")
+		setFileMode(QFileDialog_ExistingFile)
+		setViewMode(QFileDialog_List)
+		setOption(QFileDialog_ShowDirsOnly,False)
+	}
+
+	oSaveFileDialog = new QFileDialog(NULL) {
+		setFilter(QDir_AllEntries|QDir_Hidden|QDir_System)
+		setFileSelectedevent(Method("oFile.SaveFileDialogOperation()"))
+		setWindowTitle("Save Form")
+		setLabelText(QFileDialog_Accept,"Save")
+		setNameFilter("Form files (*.rform *)")
+		setDefaultSuffix("rform")
+		setFileMode(QFileDialog_AnyFile)
+		setViewMode(QFileDialog_List)
+		setOption(QFileDialog_ShowDirsOnly,False)
+	}
+
+	cInputFileName
+
+	func FormDesigner 
+		return Me()
+
+	func GetFileNameFromDialog oDialog 
+		cInputFileName = ""
+		if oDialog.selectedfiles().count() = 0 return ok
+		cInputFileName = oDialog.selectedfiles().at(0)
+
+	func NewFileDialogOperation
+		GetFileNameFromDialog(oNewFileDialog)
+		NewFileDialogSaveAction(FormDesigner())
+
+	func OpenFileDialogOperation
+		GetFileNameFromDialog(oOpenFileDialog)
+		OpenFileDialogOpenAction(FormDesigner())
+
+	func SaveFileDialogOperation
+		GetFileNameFromDialog(oSaveFileDialog)
+		SaveFileDialogSaveAction(FormDesigner())
 
 	func SetFileName cFile 
 		cFileName = cFile 
@@ -30,13 +90,31 @@ class FormDesignerFileSystem
 	func NewAction oDesigner
 		# Set the file Name
 			cDir = ActiveDir(oDesigner)
+		if lUseFileDialogStaticMethods {
 			oFileDialog = new qfiledialog(oDesigner.oView.win) {
 				cInputFileName = getsavefilename(oDesigner.oView.win,"New Form",cDir,"*.rform")
 			}
-			oFileDialog.delete()
 			if cInputFileName = NULL { return }
 			cInputFileName = AddExtensionToName(cInputFileName)
-			cFileName = cInputFileName
+			cFileName = cInputFileName	
+			startNewForm(oDesigner)		
+		else 
+			if oDesigner.oView.lUseWebAssemblyMEMFS {
+				oNewFileDialog.setDirectory(cDir) 
+				oNewFileDialog.show()
+			else 
+				cFileName = "noname.rform"
+				startNewForm(oDesigner)
+			}
+		}
+
+	func NewFileDialogSaveAction oDesigner
+		if cInputFileName = NULL { return }
+		cInputFileName = AddExtensionToName(cInputFileName)
+		cFileName = cInputFileName
+		startNewForm(oDesigner)
+
+	func startNewForm oDesigner
 		# Delete Objects
 			DeleteAllObjects(oDesigner)
 		# Set Default Form Properties
@@ -107,10 +185,21 @@ class FormDesignerFileSystem
 	func OpenAction oDesigner
 		# Get the file Name
 			cDir = ActiveDir(oDesigner)
+		if lUseFileDialogStaticMethods {
 			oFileDialog = new qfiledialog(oDesigner.oView.win) {
 				cInputFileName = getopenfilename(oDesigner.oView.win,"Open Form",cDir,"*.rform")
 			}
-			oFileDialog.close()
+			if cInputFileName = NULL { return }
+			cFileName = cInputFileName
+			LoadFormFromFile(oDesigner)
+			# Open controller class in Ring Notepad 
+				OpenControllerClassInParent(oDesigner)
+		else
+			oOpenFileDialog.setDirectory(cDir) 
+			oOpenFileDialog.show()
+		}
+
+	func OpenFileDialogOpenAction oDesigner
 			if cInputFileName = NULL { return }
 			cFileName = cInputFileName
 			LoadFormFromFile(oDesigner)
@@ -130,7 +219,6 @@ class FormDesignerFileSystem
 			if cFileName != "noname.rform" {
 				SaveFormToFile(oDesigner)
 			}
-		
 
 	func SaveAsAction oDesigner
 		SaveFile(oDesigner)
@@ -138,10 +226,22 @@ class FormDesignerFileSystem
 	func SaveFile oDesigner
 		# Set the file Name
 			cDir = ActiveDir(oDesigner)
+		if lUseFileDialogStaticMethods {
 			oFileDialog = new qfiledialog(oDesigner.oView.win) {
 				cInputFileName = getsavefilename(oDesigner.oView.win,"Save Form",cDir,"*.rform")
 			}
-			oFileDialog.delete()
+			if cInputFileName = NULL { return }
+			cInputFileName = AddExtensionToName(cInputFileName)
+			cFileName = cInputFileName
+			SaveFormToFile(oDesigner)
+			# Open controller class in Ring Notepad 
+				OpenControllerClassInParent(oDesigner)
+		else 
+			oSaveFileDialog.setDirectory(cDir)
+			oSaveFileDialog.show()
+		}
+
+	func SaveFileDialogSaveAction oDesigner
 			if cInputFileName = NULL { return }
 			cInputFileName = AddExtensionToName(cInputFileName)
 			cFileName = cInputFileName
@@ -149,7 +249,7 @@ class FormDesignerFileSystem
 		# Open controller class in Ring Notepad 
 			OpenControllerClassInParent(oDesigner)
 
-	func SaveFormToFile oDesigner
+	func FormFileContent oDesigner
 		cHeader = "# Start Form Designer File" + nl
 		cEnd = "# End Form Designer File"
 		# Save the Objects Data
@@ -157,7 +257,10 @@ class FormDesignerFileSystem
 		# Write the Form File
 			cFileContent = cHeader+cContent+cEnd
 			cFileContent = substr(cFileContent,nl,windowsnl())
-			write(cFileName,cFileContent)
+		return cFileContent 
+
+	func SaveFormToFile oDesigner
+			write(cFileName,FormFileContent(oDesigner))
 		# Generate Code
 			oGenerator.Generate(oDesigner,cFileName)
 

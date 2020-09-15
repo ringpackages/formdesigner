@@ -562,7 +562,7 @@ class FormDesignerController from WindowsControllerParent
 				  the Method() Method define the event for the current object (This instance)
 				  While Method() function define the event for the current active object 
 				  The current active object maybe changed by using 
-				  open_window() or open_windownoshow() functions.
+				  openWindow() or openWindownoshow() functions.
 				  This happened when we merged the Form Designer with Ring Notepad.
 				  So to avoid defining the events for other objects, We uses This.Method() to
 				  be sure that the event will be defined for the correct object that will be
@@ -1095,7 +1095,10 @@ class FormDesignerController from WindowsControllerParent
 		}
 
 	func MSTextColor
+		oGeneral.cColorOperation = :MSTextColor
 		cColor = oGeneral.SelectColor()
+
+	func ApplyMSTextColor cColor 
 		aObjects = oModel.GetSelectedObjects()
 		for item in aObjects {
 			oObject = item[2]
@@ -1103,7 +1106,10 @@ class FormDesignerController from WindowsControllerParent
 		}
 
 	func MSBackColor
+		oGeneral.cColorOperation = :MSBackColor
 		cColor = oGeneral.SelectColor()
+
+	func ApplyMSBackColor cColor 
 		aObjects = oModel.GetSelectedObjects()
 		for item in aObjects {
 			oObject = item[2]
@@ -1111,7 +1117,10 @@ class FormDesignerController from WindowsControllerParent
 		}
 
 	func MSFont
-		cFont = oGeneral.SelectFont()
+		oGeneral.cFontOperation = :MSFont 
+		oGeneral.SelectFont()
+
+	func ApplyMSFont cFont
 		aObjects = oModel.GetSelectedObjects()
 		for item in aObjects {
 			oObject = item[2]
@@ -1253,13 +1262,12 @@ class FormDesignerController from WindowsControllerParent
 				}
 
 	func ShowMsg cTitle,cText,cText2
-		new qmessagebox(oView.win)
+		new QMessageBox(oView.win)
 		{
+			setWindowFlags(Qt_Popup | Qt_WindowTitleHint | Qt_CustomizeWindowHint)
 			setwindowtitle(cTitle)
-			settext(cText)
-			setInformativeText(cText2)
-			setstandardbuttons(QMessageBox_Ok)
-			exec()
+			settext(cText+nl+cText2)
+			show()
 		}
 
 	func BringToFront
@@ -1301,16 +1309,17 @@ class FormDesignerController from WindowsControllerParent
 
 	Func OpenCHMAction
 		new QDesktopServices {
-			OpenURL(new qURL("file:///"+substr(exefolder(),"\","/")+"../docs/ring.chm") )
+			OpenURL(new qURL("file:///"+substr(exefolder(),"\","/")+"../documents/ring.chm") )
 		}
 
 	Func OpenPDFAction
 		new QDesktopServices {
-			OpenURL(new qURL("file:///"+substr(exefolder(),"\","/")+"../docs/ring.pdf") )
+			OpenURL(new qURL("file:///"+substr(exefolder(),"\","/")+"../documents/ring.pdf") )
 		}
 
 	Func MsgBox cTitle,cMessage
-		new qMessagebox(NULL) {
+		new QMessagebox(oView.win) {
+			setWindowFlags(Qt_Popup | Qt_WindowTitleHint | Qt_CustomizeWindowHint)
 			setwindowtitle(cTitle)
 			setText(cMessage)
 			show()
@@ -1318,7 +1327,7 @@ class FormDesignerController from WindowsControllerParent
 
 	func LangAction
 		MsgBox("Programming Language",
-			"This application developed using the Ring programming language")
+			"This application is developed using the Ring programming language")
 
 	func GUIAction
 		MsgBox("GUI Library",
@@ -1328,7 +1337,7 @@ class FormDesignerController from WindowsControllerParent
 		MsgBox("About",
 		"This application developed using the Ring programming language" + nl +
 		"Ring Version : " + version() + nl +
-		"2018-2019, Mahmoud Fayed <msfclipper@yahoo.com>")
+		"2018-2020, Mahmoud Fayed <msfclipper@yahoo.com>")
 
 	func HasParent 
 		oParent = oView.win.parentwidget()
@@ -1354,10 +1363,33 @@ class FormDesignerController from WindowsControllerParent
 		oFile.SaveIfOnlyFileIsOpened(self)
 
 	func ObjectsOrderAction
-		Open_WindowAndLink(:ObjectsOrderController,self)
+		openWindowAndLink(:ObjectsOrderController,self)
 		ObjectsOrder().loadobjects()
 
 	func SelectObjectsWindow 
-		Open_WindowAndLink(:selObjectsController,self)
+		openWindowAndLink(:selObjectsController,self)
 		SelObjects().loadobjects()
+
+	func DownloadAction
+		# Avoid _ in the start of the file name (Added by Qt!)
+			cDownloadedFileName = oFile.cFileName
+			if len(cDownloadedFileName) > 1 {
+				if ! isalnum(cDownloadedFileName[1]) {
+					cDownloadedFileName = substr(cDownloadedFileName,2)
+				}
+			}
+		WebAssemblyDownload(cDownloadedFileName,oFile.FormFileContent(self))
+
+	func UploadAction 
+		WebAssemblyUpload("Form Files (*.rform)",Method(:FileLoaded))
+
+	func FileLoaded
+		if fexists( WebAssemblyUploadedFileName() ) {
+			remove( WebAssemblyUploadedFileName() )
+		}
+		Write(   WebAssemblyUploadedFileName() ,
+			 WebAssemblyUploadedFileContent()
+		)
+		OpenFile( WebAssemblyUploadedFileName() )
+
 

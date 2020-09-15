@@ -26,6 +26,8 @@ Class FormDesignerView from WindowsViewParent
 
 	oDesktop = new QDesktopWidget()
 
+	lUseWebAssemblyMEMFS = ! isWebAssembly()
+
 	func CreateMainWindow oModel
 
 		# Create the form
@@ -68,7 +70,7 @@ Class FormDesignerView from WindowsViewParent
 				setcentralWidget(this.oArea)
 				setLayoutDirection(T_LAYOUTDIRECTION)
 			}
-			setwinicon(win,$cCurrentDir + "/image/formdesigner.png")
+			setwinicon(win,AppFile("image/formdesigner.png"))
 
 		# Create the ToolBox
 			CreateToolBox()
@@ -102,7 +104,11 @@ Class FormDesignerView from WindowsViewParent
 			}
 
 		# Show the Window
-			win.showmaximized()
+			if isWebAssembly() { 
+				win.show()
+			else 
+				win.showmaximized()
+			}
 
 	func WindowMoveResizeEvents
 		oFilter = new qAllEvents(oSub) {
@@ -121,32 +127,44 @@ Class FormDesignerView from WindowsViewParent
 			subFile {
 				oAction = new qAction(this.win) {
 					setShortcut(new QKeySequence("Ctrl+shift+n"))
-					setbtnimage(self,"image/new.png")
+					setbtnimage(self,AppFile("image/new.png"))
 					settext(T_FORMDESIGNER_NEW) # "New"
 					setclickevent(Method(:NewAction))
 				}
 				addaction(oAction)
 				oAction = new qAction(this.win) {
 					setShortcut(new QKeySequence("Ctrl+shift+o"))
-					setbtnimage(self,"image/open.png")
+					setbtnimage(self,AppFile("image/open.png"))
 					settext(T_FORMDESIGNER_OPEN) # "Open"
-					setclickevent(Method(:OpenAction))
+					if this.lUseWebAssemblyMEMFS {
+						setclickevent(Method(:OpenAction))
+					else 
+						setclickevent(Method(:UploadAction))
+					}
 				}
 				addaction(oAction)
 				addseparator()
 				oAction = new qAction(this.win) {
 					setShortcut(new QKeySequence("Ctrl+shift+s"))
-					setbtnimage(self,"image/save.png")
+					setbtnimage(self,AppFile("image/save.png"))
 					settext(T_FORMDESIGNER_SAVE) # "Save"
-					setclickevent(Method(:SaveAction))
+					if this.lUseWebAssemblyMEMFS {
+						setclickevent(Method(:SaveAction))
+					else 
+						setclickevent(Method(:DownloadAction))
+					}
 				}
 				addaction(oAction)
 				addseparator()
 				oAction = new qAction(this.win) {
 					setShortcut(new QKeySequence("Ctrl+shift+e"))
-					setbtnimage(self,"image/saveas.png")
+					setbtnimage(self,AppFile("image/saveas.png"))
 					settext(T_FORMDESIGNER_SAVEAS) # "Save As"
-					setclickevent(Method(:SaveAsAction))
+					if this.lUseWebAssemblyMEMFS {
+						setclickevent(Method(:SaveAsAction))
+					else 
+						setclickevent(Method(:DownloadAction))
+					}
 				}
 				addaction(oAction)
 				addseparator()
@@ -156,10 +174,27 @@ Class FormDesignerView from WindowsViewParent
 					setclickevent(Method(:CloseAction))
 				}
 				addaction(oAction)
+
+				addseparator()
+				oAction = new qaction(this.win) {
+					settext(T_FORMDESIGNER_UPLOAD) # "Upload"
+					setstatustip("Upload File")
+					setclickevent(Method(:UploadAction))
+					setVisible(isWebAssembly() and this.lUseWebAssemblyMEMFS)
+				}
+				addaction(oAction)
+				oAction = new qaction(this.win) {
+					settext(T_FORMDESIGNER_Download) # "Download"
+					setstatustip("Download File")
+					setclickevent(Method(:DownloadAction))
+					setVisible(isWebAssembly() and this.lUseWebAssemblyMEMFS)
+				}
+				addaction(oAction)
+
 				addseparator()
 				oAction = new qaction(this.win) {
 					setShortcut(new QKeySequence("Ctrl+shift+q"))
-					setbtnimage(self,"image/close.png")
+					setbtnimage(self,AppFile("image/close.png"))
 					settext(T_FORMDESIGNER_EXIT) # "Exit"
 					setstatustip("Exit")
 					setclickevent(Method(:ExitAction))
@@ -222,20 +257,22 @@ Class FormDesignerView from WindowsViewParent
 			}
 			subHelp = addmenu(T_FORMDESIGNER_HELP) # "Help"
 			subHelp {
-				subHelpLF = addmenu(T_FORMDESIGNER_LANGUAGEREFERENCE) # "Language Reference"
-				subHelpLF {
-					oAction = new qAction(this.win) {
-						settext(T_FORMDESIGNER_CHMFILE) # "CHM File"
-						setclickevent(Method(:OpenCHMAction))
+				if ! isWebAssembly() {
+					subHelpLF = addmenu(T_FORMDESIGNER_LANGUAGEREFERENCE) # "Language Reference"
+					subHelpLF {
+						oAction = new qAction(this.win) {
+							settext(T_FORMDESIGNER_CHMFILE) # "CHM File"
+							setclickevent(Method(:OpenCHMAction))
+						}
+						addaction(oAction)
+						oAction = new qAction(this.win) {
+							settext(T_FORMDESIGNER_PDFFILE) # "PDF File"
+							setclickevent(Method(:OpenPDFAction))
+						}
+						addaction(oAction)
 					}
-					addaction(oAction)
-					oAction = new qAction(this.win) {
-						settext(T_FORMDESIGNER_PDFFILE) # "PDF File"
-						setclickevent(Method(:OpenPDFAction))
-					}
-					addaction(oAction)
+					addseparator()
 				}
-				addseparator()
 				subHelpTools = addmenu(T_FORMDESIGNER_DEVELOPMENTTOOLS) # "Development Tools"
 				subHelpTools {
 					oAction = new qAction(this.win) {
@@ -274,17 +311,29 @@ Class FormDesignerView from WindowsViewParent
 				} ,
 				new qtoolbutton(win) {
 					setbtnimage(self,AppFile("image/open.png"))
-					setclickevent(Method(:OpenAction))
+					if this.lUseWebAssemblyMEMFS {
+						setclickevent(Method(:OpenAction))
+					else 
+						setclickevent(Method(:UploadAction))
+					}
 					settooltip(T_FORMDESIGNER_TOOLBAR_OPENFILE) # "Open File"
 				} ,
 				new qtoolbutton(win) {
 					setbtnimage(self,AppFile("image/save.png"))
-					setclickevent(Method(:SaveAction))
+					if this.lUseWebAssemblyMEMFS {
+						setclickevent(Method(:SaveAction))
+					else 
+						setclickevent(Method(:DownloadAction))
+					}
 					settooltip(T_FORMDESIGNER_TOOLBAR_SAVE) # "Save"
 				} ,
 				new qtoolbutton(win) {
 					setbtnimage(self,AppFile("image/saveas.png"))
-					setclickevent(Method(:SaveAsAction))
+					if this.lUseWebAssemblyMEMFS {
+						setclickevent(Method(:SaveAsAction))
+					else 
+						setclickevent(Method(:DownloadAsAction))
+					}
 					settooltip(T_FORMDESIGNER_TOOLBAR_SAVEAS) # "Save As"
 				} ,
 				new qtoolbutton(win) {
@@ -639,9 +688,9 @@ Class FormDesignerView from WindowsViewParent
 			setWidget(oToolBox)
 			if not isMobile() {
 				if T_LAYOUTDIRECTION {
-					setMiniMumWidth(this.oDesktop.Width()*0.11)
+					setMiniMumWidth(this.oDesktop.Width()*0.12)
 				else 
-					setMiniMumWidth(this.oDesktop.Width()*0.10)
+					setMiniMumWidth(this.oDesktop.Width()*0.11)
 				}
 			}
 			setwidgetresizable(True)
