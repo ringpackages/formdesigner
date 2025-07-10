@@ -6,7 +6,7 @@
 ** 	Author : Mahmoud Fayed <msfclipper@yahoo.com>
 */
 
-T_LANGUAGE = "english"
+T_LANGUAGE = :English
 T_LAYOUTDIRECTION = 0		# Left to Right
 
 T_FORMDESIGNER_FORMDESIGNER 		= "Form Designer"
@@ -50,6 +50,7 @@ T_FORMDESIGNER_TOOLBAR_SENDTOBACK	= "Send To Back"
 T_FORMDESIGNER_TOOLBAR_DELETE		= "Delete"
 T_FORMDESIGNER_TOOLBAR_SELECTOBJECTS	= "Select Objects"
 
+T_FORMDESIGNER_WINDOW = "Window"
 T_FROMDESIGNER_TOOLBOX_WINDOWTITLE	= "ToolBox"
 T_FROMDESIGNER_TOOLBOX_LOCK		= "Lock"
 T_FROMDESIGNER_TOOLBOX_SELECT		= "Select"
@@ -362,4 +363,17 @@ T_FORMDESIGNER_GUILIB_INFO  = "This application uses the Qt GUI Library through 
 T_FORMDESIGNER_ABOUT_TITLE = "About"
 T_FORMDESIGNER_ABOUT_INFO  = "This application developed using the Ring programming language" + nl +
 		"Ring Version : " + version(True) + nl +
-		"2018-2024, Mahmoud Fayed <msfclipper@yahoo.com>"
+		"2018-2025, Mahmoud Fayed <msfclipper@yahoo.com>"
+
+
+T_FORMDESIGNER_HYPERLINK_URL = "http://www.ring-lang.net"
+T_FORMDESIGNER_HYPERLINK_URLTEXT = "Ring Language Website"
+
+T_FILENAME_CONTROLLER = "Controller"
+
+T_FORMDESIGNER_FILEEXTENSION = "rform"
+T_FORMDESIGNER_NONAMEFILE = "noname.rform"
+
+T_FORMDESIGNER_VIEWFILE = "View.ring"
+
+
